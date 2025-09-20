@@ -38,7 +38,12 @@ serve(async (req) => {
         speaker: meetingData.speakerName,
         timestamp: meetingData.timestamp,
         text: meetingData.transcript,
-        words: meetingData.words || []
+        words: meetingData.words || [],
+        confidence: meetingData.confidence || null,
+        duration: meetingData.duration || null,
+        metadata: {
+          originalData: meetingData // Store all original data for reference
+        }
       };
 
       // Check if there's an existing meeting from today with the same speaker
