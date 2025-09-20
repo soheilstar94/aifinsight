@@ -29,12 +29,112 @@ serve(async (req) => {
     const meetingData = await req.json();
     console.log('Received meeting data:', meetingData);
 
-    // Validate required fields
-    if (!meetingData.title) {
-      throw new Error('Meeting title is required');
+    // Handle real-time transcript segments
+    if (meetingData.speakerName && meetingData.transcript) {
+      // Real-time transcript segment - create or update meeting
+      const meetingTitle = `Meeting with ${meetingData.speakerName} - ${new Date(meetingData.timestamp).toLocaleDateString()}`;
+      const transcriptSegment = {
+        id: crypto.randomUUID(),
+        speaker: meetingData.speakerName,
+        timestamp: meetingData.timestamp,
+        text: meetingData.transcript,
+        words: meetingData.words || []
+      };
+
+      // Check if there's an existing meeting from today with the same speaker
+      const today = new Date().toDateString();
+      const { data: existingMeetings } = await supabase
+        .from('meetings')
+        .select('*')
+        .ilike('title', `%${meetingData.speakerName}%`)
+        .gte('date', new Date(today).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (existingMeetings && existingMeetings.length > 0) {
+        // Update existing meeting with new transcript segment
+        const existingMeeting = existingMeetings[0];
+        const updatedTranscript = [...(existingMeeting.transcript || []), transcriptSegment];
+        
+        const { data, error } = await supabase
+          .from('meetings')
+          .update({ 
+            transcript: updatedTranscript,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingMeeting.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database update error:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        console.log('Updated existing meeting:', data.id, 'with new transcript segment');
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            meeting: data,
+            action: 'updated',
+            message: 'Transcript segment added to existing meeting'
+          }),
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      } else {
+        // Create new meeting for real-time segment
+        const dbMeeting = {
+          title: meetingTitle,
+          date: meetingData.timestamp ? new Date(meetingData.timestamp).toISOString() : new Date().toISOString(),
+          duration: null,
+          participants: [{ name: meetingData.speakerName, role: 'speaker' }],
+          tags: [],
+          key_insights: [],
+          status: 'processing',
+          transcript_url: null,
+          summary: null,
+          stock_tickers: [],
+          industries: [],
+          transcript: [transcriptSegment],
+          overview: null
+        };
+
+        // Insert new meeting into database
+        const { data, error } = await supabase
+          .from('meetings')
+          .insert(dbMeeting)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Database error:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        console.log('Successfully created new meeting:', data.id);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            meeting: data,
+            action: 'created',
+            message: 'New meeting created from transcript segment'
+          }),
+          { 
+            status: 201,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
 
-    // Transform the data to match our database schema
+    // Legacy format - validate required fields
+    if (!meetingData.title) {
+      throw new Error('Meeting title is required for complete meeting data');
+    }
+
     const dbMeeting = {
       title: meetingData.title,
       date: meetingData.date ? new Date(meetingData.date).toISOString() : new Date().toISOString(),
