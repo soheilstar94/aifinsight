@@ -6,22 +6,23 @@ import { AIQueryBox } from '@/components/AIQueryBox';
 import { MeetingCard } from '@/components/MeetingCard';
 import { DocumentCard } from '@/components/DocumentCard';
 import { NewsCard } from '@/components/NewsCard';
-import { mockMeetings } from '@/data/mockMeetings';
+import { useMeetings } from '@/hooks/useMeetings';
 import { mockDocuments } from '@/data/mockDocuments';
 import { mockNews } from '@/data/mockNews';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mic, Upload, FileText, TrendingUp, Download, Eye, Calendar, Newspaper } from 'lucide-react';
+import { Plus, Mic, Upload, FileText, TrendingUp, Download, Eye, Calendar, Newspaper, Loader2 } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({ filters: [], dateRange: {} });
+  const { meetings, loading, error } = useMeetings();
 
   const filteredMeetings = useMemo(() => {
-    return mockMeetings.filter(meeting => {
+    return meetings.filter(meeting => {
       const matchesSearch = searchQuery === '' || 
         meeting.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         meeting.participants.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -32,7 +33,7 @@ const Index = () => {
 
       return matchesSearch && matchesFilters;
     });
-  }, [searchQuery, filters]);
+  }, [meetings, searchQuery, filters]);
 
   const handleMeetingClick = (meetingId: string) => {
     navigate(`/meeting/${meetingId}`);
@@ -115,27 +116,62 @@ const Index = () => {
           </div>
 
           <TabsContent value="meetings" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {filteredMeetings.map((meeting) => (
-                <MeetingCard
-                  key={meeting.id}
-                  meeting={meeting}
-                  onClick={() => handleMeetingClick(meeting.id)}
-                />
-              ))}
-            </div>
-
-            {filteredMeetings.length === 0 && (
+            {loading ? (
               <Card className="border-border/50 bg-card/30">
                 <CardContent className="py-12 text-center">
                   <div className="space-y-3">
-                    <div className="text-muted-foreground">No meetings found matching your criteria</div>
-                    <Button variant="outline" onClick={() => {setSearchQuery(''); setFilters({ filters: [], dateRange: {} });}}>
-                      Clear Filters
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                    <div className="text-muted-foreground">Loading meetings...</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : error ? (
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardContent className="py-12 text-center">
+                  <div className="space-y-3">
+                    <div className="text-destructive">Error loading meetings: {error}</div>
+                    <Button variant="outline" onClick={() => window.location.reload()}>
+                      Retry
                     </Button>
                   </div>
                 </CardContent>
               </Card>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {filteredMeetings.map((meeting) => (
+                    <MeetingCard
+                      key={meeting.id}
+                      meeting={meeting}
+                      onClick={() => handleMeetingClick(meeting.id)}
+                    />
+                  ))}
+                </div>
+
+                {!loading && filteredMeetings.length === 0 && meetings.length === 0 ? (
+                  <Card className="border-border/50 bg-card/30">
+                    <CardContent className="py-12 text-center">
+                      <div className="space-y-3">
+                        <div className="text-muted-foreground">No meetings yet. Send meeting transcripts to start building your repository.</div>
+                        <div className="text-sm text-muted-foreground/70">
+                          Use the webhook URL: <code className="bg-muted px-2 py-1 rounded text-xs">https://bfukigjwkrefrlricsgq.functions.supabase.co/functions/v1/meeting-webhook</code>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : !loading && filteredMeetings.length === 0 && meetings.length > 0 ? (
+                  <Card className="border-border/50 bg-card/30">
+                    <CardContent className="py-12 text-center">
+                      <div className="space-y-3">
+                        <div className="text-muted-foreground">No meetings found matching your criteria</div>
+                        <Button variant="outline" onClick={() => {setSearchQuery(''); setFilters({ filters: [], dateRange: {} });}}>
+                          Clear Filters
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+              </>
             )}
           </TabsContent>
 

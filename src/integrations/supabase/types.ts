@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meetings: {
+        Row: {
+          created_at: string
+          date: string
+          duration: number | null
+          id: string
+          industries: Json | null
+          key_insights: Json | null
+          overview: Json | null
+          participants: Json | null
+          status: string | null
+          stock_tickers: Json | null
+          summary: string | null
+          tags: Json | null
+          title: string
+          transcript: Json | null
+          transcript_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          duration?: number | null
+          id?: string
+          industries?: Json | null
+          key_insights?: Json | null
+          overview?: Json | null
+          participants?: Json | null
+          status?: string | null
+          stock_tickers?: Json | null
+          summary?: string | null
+          tags?: Json | null
+          title: string
+          transcript?: Json | null
+          transcript_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          duration?: number | null
+          id?: string
+          industries?: Json | null
+          key_insights?: Json | null
+          overview?: Json | null
+          participants?: Json | null
+          status?: string | null
+          stock_tickers?: Json | null
+          summary?: string | null
+          tags?: Json | null
+          title?: string
+          transcript?: Json | null
+          transcript_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
